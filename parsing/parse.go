@@ -8,6 +8,8 @@ import (
 	"io"
 	"net"
 	"reflect"
+
+	"google.golang.org/protobuf/proto"
 )
 
 func ParseEnvelope(conn net.Conn) (*PacketEnvelope, error) {
@@ -41,12 +43,45 @@ func ParseEnvelope(conn net.Conn) (*PacketEnvelope, error) {
 
 // ParseHeader parses raw header bytes into a user-defined struct with bmux tags,
 // and extracts the field tagged with `bmux:"msg_id"` for routing.
+// Supports protobuf messages if headerPtr implements proto.Message.
 func ParseHeader(rawHead []byte, headerPtr any) (msgID int32, err error) {
 	v := reflect.ValueOf(headerPtr)
 	if v.Kind() != reflect.Pointer || v.Elem().Kind() != reflect.Struct {
 		return 0, errors.New("headerPtr must be a pointer to a struct")
 	}
 
+	// Check if headerPtr implements proto.Message (protobuf)
+	if pm, ok := headerPtr.(proto.Message); ok {
+		// Use protobuf unmarshalling
+		if err := proto.Unmarshal(rawHead, pm); err != nil {
+			return 0, fmt.Errorf("failed to unmarshal protobuf header: %w", err)
+		}
+
+		// Extract msg_id field
+		structVal := v.Elem()
+		structType := structVal.Type()
+
+		for i := 0; i < structVal.NumField(); i++ {
+			fieldType := structType.Field(i)
+			if tag := fieldType.Tag.Get("bmux"); tag == "msg_id" {
+				field := structVal.Field(i)
+				if !field.IsValid() {
+					return 0, errors.New("msg_id field is invalid")
+				}
+				switch field.Kind() {
+				case reflect.Int32, reflect.Int:
+					return int32(field.Int()), nil
+				case reflect.Uint32, reflect.Uint, reflect.Uint64:
+					return int32(field.Uint()), nil
+				default:
+					return 0, fmt.Errorf("unsupported msg_id field kind %s", field.Kind())
+				}
+			}
+		}
+		return 0, errors.New("no field tagged with `bmux:\"msg_id\"` found")
+	}
+
+	// Fallback to manual binary decoding
 	r := bytes.NewReader(rawHead)
 	structVal := v.Elem()
 	structType := structVal.Type()

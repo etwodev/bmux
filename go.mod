@@ -2,7 +2,10 @@ module github.com/etwodev/bmux
 
 go 1.23.2
 
-require github.com/rs/zerolog v1.34.0
+require (
+	github.com/rs/zerolog v1.34.0
+	google.golang.org/protobuf v1.36.6
+)
 
 require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
