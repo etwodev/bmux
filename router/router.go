@@ -15,7 +15,7 @@ type Context struct {
 type HandlerFunc func(*Context)
 
 // Router defines a message-based router for the bmux protocol.
-// It maps incoming message identifiers (uint16) to handlers,
+// It maps incoming message identifiers (int32) to handlers,
 // supports middleware, and allows for enabling/disabling routers.
 type Router interface {
 	// Routes returns all registered routes in the router.
@@ -31,8 +31,8 @@ type Router interface {
 
 // Route defines a handler for a specific message ID in the bmux protocol.
 type Route interface {
-	// ID returns the uint16 message ID this route handles.
-	ID() uint16
+	// ID returns the int32 message ID this route handles.
+	ID() int32
 
 	// Name returns the name of the route, useful for logging.
 	Name() string

@@ -29,10 +29,10 @@ import (
 
 // Define your header struct
 type MyHeader struct {
-	Command uint16
+	Command int32
 }
 
-func (h *MyHeader) ID() uint16 {
+func (h *MyHeader) ID() int32 {
 	return h.Command
 }
 

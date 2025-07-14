@@ -41,7 +41,7 @@ func ParseEnvelope(conn net.Conn) (*PacketEnvelope, error) {
 
 // ParseHeader parses raw header bytes into a user-defined struct with bmux tags,
 // and extracts the field tagged with `bmux:"msg_id"` for routing.
-func ParseHeader(rawHead []byte, headerPtr any) (msgID uint16, err error) {
+func ParseHeader(rawHead []byte, headerPtr any) (msgID int32, err error) {
 	v := reflect.ValueOf(headerPtr)
 	if v.Kind() != reflect.Pointer || v.Elem().Kind() != reflect.Struct {
 		return 0, errors.New("headerPtr must be a pointer to a struct")
@@ -60,6 +60,7 @@ func ParseHeader(rawHead []byte, headerPtr any) (msgID uint16, err error) {
 		}
 
 		switch field.Kind() {
+		// Unsigned integers
 		case reflect.Uint8:
 			var tmp uint8
 			if err := binary.Read(r, binary.BigEndian, &tmp); err != nil {
@@ -81,16 +82,46 @@ func ParseHeader(rawHead []byte, headerPtr any) (msgID uint16, err error) {
 			}
 			field.SetUint(uint64(tmp))
 
+		// Signed integers
+		case reflect.Int8:
+			var tmp int8
+			if err := binary.Read(r, binary.BigEndian, &tmp); err != nil {
+				return 0, fmt.Errorf("failed to decode int8 field '%s': %w", fieldType.Name, err)
+			}
+			field.SetInt(int64(tmp))
+
+		case reflect.Int16:
+			var tmp int16
+			if err := binary.Read(r, binary.BigEndian, &tmp); err != nil {
+				return 0, fmt.Errorf("failed to decode int16 field '%s': %w", fieldType.Name, err)
+			}
+			field.SetInt(int64(tmp))
+
+		case reflect.Int32:
+			var tmp int32
+			if err := binary.Read(r, binary.BigEndian, &tmp); err != nil {
+				return 0, fmt.Errorf("failed to decode int32 field '%s': %w", fieldType.Name, err)
+			}
+			field.SetInt(int64(tmp))
+
 		default:
 			return 0, fmt.Errorf("unsupported field kind '%s' in struct '%s'", field.Kind(), fieldType.Name)
 		}
 	}
 
-	// Extract the msg_id field
+	// Extract the msg_id field (now int32)
 	for i := 0; i < structVal.NumField(); i++ {
 		fieldType := structType.Field(i)
 		if tag := fieldType.Tag.Get("bmux"); tag == "msg_id" {
-			return uint16(structVal.Field(i).Uint()), nil
+			field := structVal.Field(i)
+			if !field.IsValid() {
+				return 0, errors.New("msg_id field is invalid")
+			}
+			if field.Kind() == reflect.Int32 {
+				return int32(field.Int()), nil
+			}
+			// fallback, try to cast unsigned or other ints to int32 safely
+			return int32(field.Int()), nil
 		}
 	}
 

@@ -29,7 +29,7 @@ type Server struct {
 	headerPrototype any                           // used to clone a new header per request
 	routers         []router.Router               // routers loaded but not yet registered
 	middlewares     []middleware.Middleware       // global middleware applied on all routes
-	handlers        map[uint16]router.HandlerFunc // flat route lookup for fast dispatch
+	handlers        map[int32]router.HandlerFunc // flat route lookup for fast dispatch
 	logger          log.Logger
 }
 
@@ -65,7 +65,7 @@ func New(headerPrototype any, opts ...Option) *Server {
 		connections:     make(map[net.Conn]struct{}),
 		quit:            make(chan struct{}),
 		headerPrototype: headerPrototype,
-		handlers:        make(map[uint16]router.HandlerFunc),
+		handlers:        make(map[int32]router.HandlerFunc),
 		logger:          logger,
 	}
 

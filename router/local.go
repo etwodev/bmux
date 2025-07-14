@@ -3,7 +3,7 @@ package router
 // --- Internal structs ---
 
 type route struct {
-	id           uint16
+	id           int32
 	name         string
 	status       bool
 	experimental bool
@@ -19,7 +19,7 @@ type router struct {
 
 // --- Route implementation ---
 
-func (r route) ID() uint16 {
+func (r route) ID() int32 {
 	return r.id
 }
 
@@ -83,7 +83,7 @@ func NewRouter(
 
 func NewRoute(
 	name string,
-	id uint16,
+	id int32,
 	status, experimental bool,
 	handler HandlerFunc,
 	middleware []func(HandlerFunc) HandlerFunc,
