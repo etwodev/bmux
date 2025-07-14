@@ -4,6 +4,7 @@ package router
 
 type route struct {
 	id           uint16
+	name         string
 	status       bool
 	experimental bool
 	handler      HandlerFunc
@@ -36,6 +37,10 @@ func (r route) Handler() HandlerFunc {
 
 func (r route) Middleware() []func(HandlerFunc) HandlerFunc {
 	return r.middleware
+}
+
+func (r route) Name() string {
+	return r.name
 }
 
 // --- Router implementation ---
@@ -77,6 +82,7 @@ func NewRouter(
 }
 
 func NewRoute(
+	name string,
 	id uint16,
 	status, experimental bool,
 	handler HandlerFunc,
@@ -84,6 +90,7 @@ func NewRoute(
 	opts ...RouteWrapper,
 ) Route {
 	var r Route = route{
+		name:         name,
 		id:           id,
 		status:       status,
 		experimental: experimental,

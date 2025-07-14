@@ -121,6 +121,7 @@ func (s *Server) registerRoutes() {
 
 			// Log route registration
 			s.logger.Debug().
+				Str("Name", route.Name()).
 				Int("RouteID", int(route.ID())).
 				Bool("Experimental", route.Experimental()).
 				Bool("Status", route.Status()).

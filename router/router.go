@@ -34,6 +34,9 @@ type Route interface {
 	// ID returns the uint16 message ID this route handles.
 	ID() uint16
 
+	// Name returns the name of the route, useful for logging.
+	Name() string
+
 	// Handler returns the bmux.HandlerFunc for this message.
 	Handler() HandlerFunc
 
