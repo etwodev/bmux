@@ -39,7 +39,7 @@ type Option func(*Server)
 // New returns a new Server instance with a required header prototype and optional settings.
 func New(headerPrototype any, opts ...Option) *Server {
 	if err := config.New(); err != nil {
-		baseLogger := zerolog.New(os.Stdout).With().Timestamp().Str("Group", "ramchi").Logger()
+		baseLogger := zerolog.New(os.Stdout).With().Timestamp().Str("Group", "bmux").Logger()
 		baseLogger.Fatal().Str("Function", "New").Err(err).Msg("Failed to load config")
 	}
 
@@ -50,7 +50,7 @@ func New(headerPrototype any, opts ...Option) *Server {
 	zerolog.SetGlobalLevel(level)
 
 	format := zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: "2006-01-02T15:04:05"}
-	baseLogger := zerolog.New(format).With().Timestamp().Str("Group", "ramchi").Logger()
+	baseLogger := zerolog.New(format).With().Timestamp().Str("Group", "bmux").Logger()
 
 	logger := log.NewZeroLogger(baseLogger)
 
@@ -118,6 +118,13 @@ func (s *Server) registerRoutes() {
 					handler = mw.Method()(handler)
 				}
 			}
+
+			// Log route registration
+			s.logger.Debug().
+				Int("RouteID", int(route.ID())).
+				Bool("Experimental", route.Experimental()).
+				Bool("Status", route.Status()).
+				Msg("Registering route")
 
 			s.handlers[route.ID()] = handler
 		}
