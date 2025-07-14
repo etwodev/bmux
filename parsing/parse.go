@@ -20,7 +20,6 @@ func ParseEnvelope(conn net.Conn) (*PacketEnvelope, error) {
 
 	headLen := header[0]
 	bodyLen := binary.LittleEndian.Uint16(header[1:3])
-	fmt.Printf("Parsed envelope header: headLen=%d, bodyLen=%d\n", headLen, bodyLen)
 
 	rawHead := make([]byte, headLen)
 	if _, err := io.ReadFull(conn, rawHead); err != nil {
@@ -41,29 +40,30 @@ func ParseEnvelope(conn net.Conn) (*PacketEnvelope, error) {
 	}, nil
 }
 
-// ParseHeader parses raw header bytes into a user-defined struct with bmux tags,
-// and extracts the field tagged with `bmux:"msg_id"` for routing.
-// Supports protobuf messages if headerPtr implements proto.Message.
+// ParseHeader parses raw header bytes into a user-defined struct,
+// using protobuf unmarshalling if applicable.
+// For protobuf messages, it extracts the msgID from the field named "Msgid".
+// For manual structs, it uses bmux tags, including bmux:"msg_id".
 func ParseHeader(rawHead []byte, headerPtr any) (msgID int32, err error) {
 	v := reflect.ValueOf(headerPtr)
 	if v.Kind() != reflect.Pointer || v.Elem().Kind() != reflect.Struct {
 		return 0, errors.New("headerPtr must be a pointer to a struct")
 	}
 
-	// Check if headerPtr implements proto.Message (protobuf)
+	// Check if protobuf message
 	if pm, ok := headerPtr.(proto.Message); ok {
-		// Use protobuf unmarshalling
+		// Unmarshal protobuf
 		if err := proto.Unmarshal(rawHead, pm); err != nil {
 			return 0, fmt.Errorf("failed to unmarshal protobuf header: %w", err)
 		}
 
-		// Extract msg_id field
+		// Extract msgID by field name "Msgid"
 		structVal := v.Elem()
 		structType := structVal.Type()
 
 		for i := 0; i < structVal.NumField(); i++ {
 			fieldType := structType.Field(i)
-			if tag := fieldType.Tag.Get("bmux"); tag == "msg_id" {
+			if fieldType.Name == "Msgid" {
 				field := structVal.Field(i)
 				if !field.IsValid() {
 					return 0, errors.New("msg_id field is invalid")
@@ -78,10 +78,10 @@ func ParseHeader(rawHead []byte, headerPtr any) (msgID int32, err error) {
 				}
 			}
 		}
-		return 0, errors.New("no field tagged with `bmux:\"msg_id\"` found")
+		return 0, errors.New("no field named 'Msgid' found in protobuf header")
 	}
 
-	// Fallback to manual binary decoding
+	// Manual binary decoding fallback
 	r := bytes.NewReader(rawHead)
 	structVal := v.Elem()
 	structType := structVal.Type()
@@ -95,7 +95,6 @@ func ParseHeader(rawHead []byte, headerPtr any) (msgID int32, err error) {
 		}
 
 		switch field.Kind() {
-		// Unsigned integers
 		case reflect.Uint8:
 			var tmp uint8
 			if err := binary.Read(r, binary.BigEndian, &tmp); err != nil {
@@ -117,7 +116,6 @@ func ParseHeader(rawHead []byte, headerPtr any) (msgID int32, err error) {
 			}
 			field.SetUint(uint64(tmp))
 
-		// Signed integers
 		case reflect.Int8:
 			var tmp int8
 			if err := binary.Read(r, binary.BigEndian, &tmp); err != nil {
@@ -144,7 +142,7 @@ func ParseHeader(rawHead []byte, headerPtr any) (msgID int32, err error) {
 		}
 	}
 
-	// Extract the msg_id field (now int32)
+	// Extract msg_id by bmux tag "msg_id"
 	for i := 0; i < structVal.NumField(); i++ {
 		fieldType := structType.Field(i)
 		if tag := fieldType.Tag.Get("bmux"); tag == "msg_id" {
@@ -152,11 +150,14 @@ func ParseHeader(rawHead []byte, headerPtr any) (msgID int32, err error) {
 			if !field.IsValid() {
 				return 0, errors.New("msg_id field is invalid")
 			}
-			if field.Kind() == reflect.Int32 {
+			switch field.Kind() {
+			case reflect.Int32, reflect.Int:
 				return int32(field.Int()), nil
+			case reflect.Uint32, reflect.Uint, reflect.Uint64:
+				return int32(field.Uint()), nil
+			default:
+				return 0, fmt.Errorf("unsupported msg_id field kind %s", field.Kind())
 			}
-			// fallback, try to cast unsigned or other ints to int32 safely
-			return int32(field.Int()), nil
 		}
 	}
 
