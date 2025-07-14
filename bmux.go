@@ -224,7 +224,7 @@ func (s *Server) acceptLoop() {
 				}
 			}
 
-			go s.handleConnection(c)
+			s.handleConnection(c)
 		}(conn)
 	}
 }
