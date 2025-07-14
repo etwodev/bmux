@@ -26,9 +26,9 @@ type Server struct {
 	mu              sync.Mutex
 	wg              sync.WaitGroup
 	quit            chan struct{}
-	headerPrototype any                           // used to clone a new header per request
-	routers         []router.Router               // routers loaded but not yet registered
-	middlewares     []middleware.Middleware       // global middleware applied on all routes
+	headerPrototype any                          // used to clone a new header per request
+	routers         []router.Router              // routers loaded but not yet registered
+	middlewares     []middleware.Middleware      // global middleware applied on all routes
 	handlers        map[int32]router.HandlerFunc // flat route lookup for fast dispatch
 	logger          log.Logger
 }
@@ -224,7 +224,7 @@ func (s *Server) acceptLoop() {
 				}
 			}
 
-			s.handleConnection(c)
+			go s.handleConnection(c)
 		}(conn)
 	}
 }
@@ -268,7 +268,7 @@ func (s *Server) handleConnection(conn net.Conn) {
 			Body:   envelope.RawBody,
 		}
 
-		go handler(ctx)
+		handler(ctx)
 	}
 }
 

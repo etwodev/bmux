@@ -10,35 +10,37 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/etwodev/bmux/config"
 	"google.golang.org/protobuf/proto"
 )
 
 func ParseEnvelope(conn net.Conn) (*PacketEnvelope, error) {
-	header := make([]byte, 3)
-	_ = conn.SetReadDeadline(time.Now().Add(10 * time.Second)) // temporarily extend read timeout for debugging
-
-	n, err := io.ReadFull(conn, header)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read header fields: %w (read bytes: %d)", err, n)
+	if timeout := config.ReadTimeout(); timeout > 0 {
+		_ = conn.SetReadDeadline(time.Now().Add(time.Duration(timeout) * time.Second))
 	}
 
-	// log received header bytes
-	fmt.Printf("Received envelope header: %v\n", header)
+	header := make([]byte, 3)
+	if _, err := io.ReadFull(conn, header); err != nil {
+		return nil, fmt.Errorf("failed to read header fields: %w", err)
+	}
 
-	// parse lengths as before
 	headLen := header[0]
 	bodyLen := binary.LittleEndian.Uint16(header[1:3])
 
 	rawHead := make([]byte, headLen)
-	n, err = io.ReadFull(conn, rawHead)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read header: %w (read bytes: %d)", err, n)
+	if timeout := config.ReadTimeout(); timeout > 0 {
+		_ = conn.SetReadDeadline(time.Now().Add(time.Duration(timeout) * time.Second))
+	}
+	if _, err := io.ReadFull(conn, rawHead); err != nil {
+		return nil, fmt.Errorf("failed to read header: %w", err)
 	}
 
 	rawBody := make([]byte, bodyLen)
-	n, err = io.ReadFull(conn, rawBody)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read body: %w (read bytes: %d)", err, n)
+	if timeout := config.ReadTimeout(); timeout > 0 {
+		_ = conn.SetReadDeadline(time.Now().Add(time.Duration(timeout) * time.Second))
+	}
+	if _, err := io.ReadFull(conn, rawBody); err != nil {
+		return nil, fmt.Errorf("failed to read body: %w", err)
 	}
 
 	return &PacketEnvelope{
