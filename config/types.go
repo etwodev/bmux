@@ -13,7 +13,7 @@ type Config struct {
 	IdleTimeout         int    `json:"idleTimeout"`         // Idle connection timeout in seconds
 	ShutdownTimeout     int    `json:"shutdownTimeout"`     // Graceful shutdown timeout in seconds
 	EnableKeepAlive     bool   `json:"enableKeepAlive"`     // Whether to enable TCP keep-alive
-	EnablePacketLogging bool   `json:"EnablePacketLogging"` // whether packet logging middleware should be enabled
+	EnablePacketLogging bool   `json:"enablePacketLogging"` // whether packet logging middleware should be enabled
 }
 
 func Port() string              { return c.Port }
