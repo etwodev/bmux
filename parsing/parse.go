@@ -18,6 +18,7 @@ func ParseEnvelope(conn net.Conn) (*PacketEnvelope, error) {
 
 	headLen := header[0]
 	bodyLen := binary.BigEndian.Uint16(header[1:3])
+	fmt.Printf("Parsed envelope header: headLen=%d, bodyLen=%d\n", headLen, bodyLen)
 
 	rawHead := make([]byte, headLen)
 	if _, err := io.ReadFull(conn, rawHead); err != nil {
@@ -26,6 +27,7 @@ func ParseEnvelope(conn net.Conn) (*PacketEnvelope, error) {
 
 	rawBody := make([]byte, bodyLen)
 	if _, err := io.ReadFull(conn, rawBody); err != nil {
+		fmt.Printf("Timed out or failed reading body, expected: %d bytes\n", bodyLen)
 		return nil, fmt.Errorf("failed to read body: %w", err)
 	}
 
