@@ -17,7 +17,7 @@ func ParseEnvelope(conn net.Conn) (*PacketEnvelope, error) {
 	}
 
 	headLen := header[0]
-	bodyLen := binary.BigEndian.Uint16(header[1:3])
+	bodyLen := binary.LittleEndian.Uint16(header[1:3])
 	fmt.Printf("Parsed envelope header: headLen=%d, bodyLen=%d\n", headLen, bodyLen)
 
 	rawHead := make([]byte, headLen)
