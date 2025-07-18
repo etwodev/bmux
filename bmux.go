@@ -101,12 +101,7 @@ func (s *Server) registerRoutes() {
 
 			handler := route.Handler()
 
-			// Apply root middleware
-			if config.EnablePacketLogging() {
-				handler = middleware.NewLoggingMiddleware(s.logger).Method()(handler)
-			}
-
-			// Apply route-level middleware (innermost)
+			// Apply route-level middleware (innermost) - RUNS LAST
 			for i := len(route.Middleware()) - 1; i >= 0; i-- {
 				handler = route.Middleware()[i](handler)
 			}
@@ -116,12 +111,17 @@ func (s *Server) registerRoutes() {
 				handler = rt.Middleware()[i](handler)
 			}
 
-			// Apply global middleware (outermost)
+			// Apply global middleware
 			for i := len(s.middlewares) - 1; i >= 0; i-- {
 				mw := s.middlewares[i]
 				if mw.Status() {
 					handler = mw.Method()(handler)
 				}
+			}
+
+			// Apply root middleware (outermost) - RUNS FIRST
+			if config.EnablePacketLogging() {
+				handler = middleware.NewLoggingMiddleware(s.logger).Method()(handler)
 			}
 
 			// Log route registration
