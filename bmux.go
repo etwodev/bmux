@@ -101,6 +101,11 @@ func (s *Server) registerRoutes() {
 
 			handler := route.Handler()
 
+			// Apply root middleware
+			if config.EnablePacketLogging() {
+				handler = middleware.NewLoggingMiddleware(s.logger).Method()(handler)
+			}
+
 			// Apply route-level middleware (innermost)
 			for i := len(route.Middleware()) - 1; i >= 0; i-- {
 				handler = route.Middleware()[i](handler)
@@ -134,9 +139,6 @@ func (s *Server) registerRoutes() {
 
 // Start begins accepting connections on the configured TCP address and port.
 func (s *Server) Start() error {
-	if config.EnablePacketLogging() {
-		s.middlewares = append([]middleware.Middleware{middleware.NewLoggingMiddleware(s.logger)}, s.middlewares...)
-	}
 	s.registerRoutes()
 
 	addr := net.JoinHostPort(config.Address(), config.Port())
