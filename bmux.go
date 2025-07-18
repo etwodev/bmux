@@ -273,6 +273,7 @@ func (s *Server) handleConnection(conn net.Conn) {
 			Conn:    conn,
 			Header:  header,
 			Body:    envelope.RawBody,
+			MsgID:   int(msgID),
 		}
 
 		handler(rctx)

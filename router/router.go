@@ -10,6 +10,7 @@ type Context struct {
 	Conn            net.Conn // TCP connection
 	Header          any      // parsed header object
 	Body            []byte   // message body
+	MsgID           int      // message ID
 }
 
 type HandlerFunc func(*Context)
