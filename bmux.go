@@ -233,6 +233,13 @@ func (s *Server) acceptLoop() {
 
 // handleConnection reads messages from the connection and routes them.
 func (s *Server) handleConnection(conn net.Conn) {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	defer func() {
+		cancel()
+		_ = conn.Close()
+	}()
+
 	for {
 		envelope, err := parsing.ParseEnvelope(conn)
 		if err != nil {
@@ -240,7 +247,6 @@ func (s *Server) handleConnection(conn net.Conn) {
 				Str("Function", "handleConnection").
 				Err(err).
 				Msg("Failed to parse envelope")
-
 			break
 		}
 
@@ -251,7 +257,6 @@ func (s *Server) handleConnection(conn net.Conn) {
 				Str("Function", "handleConnection").
 				Err(err).
 				Msg("Failed to parse header")
-
 			continue
 		}
 
@@ -260,17 +265,17 @@ func (s *Server) handleConnection(conn net.Conn) {
 			s.logger.Warn().
 				Int("MsgID", int(msgID)).
 				Msg("No handler registered for message ID")
-
 			continue
 		}
 
-		ctx := &router.Context{
-			Conn:   conn,
-			Header: header,
-			Body:   envelope.RawBody,
+		rctx := &router.Context{
+			Context: ctx,
+			Conn:    conn,
+			Header:  header,
+			Body:    envelope.RawBody,
 		}
 
-		handler(ctx)
+		handler(rctx)
 	}
 }
 
