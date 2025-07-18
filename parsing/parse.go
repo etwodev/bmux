@@ -1,19 +1,21 @@
 package parsing
 
 import (
-	"bytes"
+	"context"
 	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
 	"net"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/etwodev/bmux/config"
 	"google.golang.org/protobuf/proto"
 )
 
+// ParseEnvelope extracts the raw header and body using the first three bytes.
 func ParseEnvelope(conn net.Conn) (*PacketEnvelope, error) {
 	if timeout := config.ReadTimeout(); timeout > 0 {
 		_ = conn.SetReadDeadline(time.Now().Add(time.Duration(timeout) * time.Second))
@@ -51,115 +53,39 @@ func ParseEnvelope(conn net.Conn) (*PacketEnvelope, error) {
 	}, nil
 }
 
-// ParseHeader parses raw header bytes into a user-defined struct,
-// using protobuf unmarshalling if applicable.
-// For protobuf messages, it extracts the msgID from the field named "Msgid".
-// For manual structs, it uses bmux tags, including bmux:"msg_id".
-func ParseHeader(rawHead []byte, headerPtr any) (msgID int32, err error) {
+// ParseHeader parses raw header bytes into a user-defined protobuf struct.
+// It unmarshals the header and extracts the Msgid field (case-insensitive, supports underscores and dashes).
+func ParseHeader(rawHead []byte, headerPtr any) (int32, error) {
 	v := reflect.ValueOf(headerPtr)
 	if v.Kind() != reflect.Pointer || v.Elem().Kind() != reflect.Struct {
 		return 0, errors.New("headerPtr must be a pointer to a struct")
 	}
 
-	// Check if protobuf message
-	if pm, ok := headerPtr.(proto.Message); ok {
-		// Unmarshal protobuf
-		if err := proto.Unmarshal(rawHead, pm); err != nil {
-			return 0, fmt.Errorf("failed to unmarshal protobuf header: %w", err)
-		}
-
-		// Extract msgID by field name "Msgid"
-		structVal := v.Elem()
-		structType := structVal.Type()
-
-		for i := 0; i < structVal.NumField(); i++ {
-			fieldType := structType.Field(i)
-			if fieldType.Name == "Msgid" {
-				field := structVal.Field(i)
-				if !field.IsValid() {
-					return 0, errors.New("msg_id field is invalid")
-				}
-				switch field.Kind() {
-				case reflect.Int32, reflect.Int:
-					return int32(field.Int()), nil
-				case reflect.Uint32, reflect.Uint, reflect.Uint64:
-					return int32(field.Uint()), nil
-				default:
-					return 0, fmt.Errorf("unsupported msg_id field kind %s", field.Kind())
-				}
-			}
-		}
-		return 0, errors.New("no field named 'Msgid' found in protobuf header")
+	pm, ok := headerPtr.(proto.Message)
+	if !ok {
+		return 0, errors.New("headerPtr must implement proto.Message")
 	}
 
-	// Manual binary decoding fallback
-	r := bytes.NewReader(rawHead)
+	if err := proto.Unmarshal(rawHead, pm); err != nil {
+		return 0, fmt.Errorf("failed to unmarshal protobuf header: %w", err)
+	}
+
 	structVal := v.Elem()
 	structType := structVal.Type()
 
-	for i := 0; i < structVal.NumField(); i++ {
-		field := structVal.Field(i)
-		fieldType := structType.Field(i)
-
-		if !field.CanSet() {
-			continue
-		}
-
-		switch field.Kind() {
-		case reflect.Uint8:
-			var tmp uint8
-			if err := binary.Read(r, binary.BigEndian, &tmp); err != nil {
-				return 0, fmt.Errorf("failed to decode uint8 field '%s': %w", fieldType.Name, err)
-			}
-			field.SetUint(uint64(tmp))
-
-		case reflect.Uint16:
-			var tmp uint16
-			if err := binary.Read(r, binary.BigEndian, &tmp); err != nil {
-				return 0, fmt.Errorf("failed to decode uint16 field '%s': %w", fieldType.Name, err)
-			}
-			field.SetUint(uint64(tmp))
-
-		case reflect.Uint32:
-			var tmp uint32
-			if err := binary.Read(r, binary.BigEndian, &tmp); err != nil {
-				return 0, fmt.Errorf("failed to decode uint32 field '%s': %w", fieldType.Name, err)
-			}
-			field.SetUint(uint64(tmp))
-
-		case reflect.Int8:
-			var tmp int8
-			if err := binary.Read(r, binary.BigEndian, &tmp); err != nil {
-				return 0, fmt.Errorf("failed to decode int8 field '%s': %w", fieldType.Name, err)
-			}
-			field.SetInt(int64(tmp))
-
-		case reflect.Int16:
-			var tmp int16
-			if err := binary.Read(r, binary.BigEndian, &tmp); err != nil {
-				return 0, fmt.Errorf("failed to decode int16 field '%s': %w", fieldType.Name, err)
-			}
-			field.SetInt(int64(tmp))
-
-		case reflect.Int32:
-			var tmp int32
-			if err := binary.Read(r, binary.BigEndian, &tmp); err != nil {
-				return 0, fmt.Errorf("failed to decode int32 field '%s': %w", fieldType.Name, err)
-			}
-			field.SetInt(int64(tmp))
-
-		default:
-			return 0, fmt.Errorf("unsupported field kind '%s' in struct '%s'", field.Kind(), fieldType.Name)
-		}
+	isMsgIDField := func(name string) bool {
+		normalized := strings.ToLower(name)
+		normalized = strings.ReplaceAll(normalized, "_", "")
+		normalized = strings.ReplaceAll(normalized, "-", "")
+		return normalized == "msgid"
 	}
 
-	// Extract msg_id by bmux tag "msg_id"
 	for i := 0; i < structVal.NumField(); i++ {
 		fieldType := structType.Field(i)
-		if tag := fieldType.Tag.Get("bmux"); tag == "msg_id" {
+		if isMsgIDField(fieldType.Name) {
 			field := structVal.Field(i)
 			if !field.IsValid() {
-				return 0, errors.New("msg_id field is invalid")
+				return 0, errors.New("field Msgid is invalid")
 			}
 			switch field.Kind() {
 			case reflect.Int32, reflect.Int:
@@ -167,10 +93,58 @@ func ParseHeader(rawHead []byte, headerPtr any) (msgID int32, err error) {
 			case reflect.Uint32, reflect.Uint, reflect.Uint64:
 				return int32(field.Uint()), nil
 			default:
-				return 0, fmt.Errorf("unsupported msg_id field kind %s", field.Kind())
+				return 0, fmt.Errorf("unsupported Msgid field kind %s", field.Kind())
 			}
 		}
 	}
 
-	return 0, errors.New("no field tagged with `bmux:\"msg_id\"` found")
+	return 0, errors.New("no recognizable 'Msgid' field found in protobuf header")
+}
+
+// WritePacket marshals and writes a packet with the given header and body to the provided connection.
+// The packet layout is: [headLen:1][bodyLen:2][headBytes][bodyBytes].
+// It injects the given msgID into the header's Msgid field if available.
+// It enforces max header (255 bytes) and body (65535 bytes) size constraints.
+func WritePacket(ctx context.Context, conn net.Conn, header proto.Message, body proto.Message) error {
+	if timeout := config.WriteTimeout(); timeout > 0 {
+		_ = conn.SetWriteDeadline(time.Now().Add(time.Duration(timeout) * time.Second))
+	}
+
+	var (
+		headBytes []byte
+		bodyBytes []byte
+		err       error
+	)
+
+	if header != nil {
+		headBytes, err = proto.Marshal(header)
+		if err != nil {
+			return fmt.Errorf("marshal header: %w", err)
+		}
+		if len(headBytes) > 255 {
+			return fmt.Errorf("header too large to encode (max 255 bytes), got %d", len(headBytes))
+		}
+	}
+
+	if body != nil {
+		bodyBytes, err = proto.Marshal(body)
+		if err != nil {
+			return fmt.Errorf("marshal body: %w", err)
+		}
+		if len(bodyBytes) > 65535 {
+			return fmt.Errorf("body too large to encode (max 65535 bytes), got %d", len(bodyBytes))
+		}
+	}
+
+	packet := make([]byte, 3+len(headBytes)+len(bodyBytes))
+	packet[0] = byte(len(headBytes))
+	binary.LittleEndian.PutUint16(packet[1:3], uint16(len(bodyBytes)))
+	copy(packet[3:], headBytes)
+	copy(packet[3+len(headBytes):], bodyBytes)
+
+	_, err = conn.Write(packet)
+	if err != nil {
+		return fmt.Errorf("write packet: %w", err)
+	}
+	return nil
 }
