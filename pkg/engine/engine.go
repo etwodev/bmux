@@ -23,7 +23,6 @@ type EngineWrapper[T any] struct {
 	MaxConnections    int64
 	HeadSize          int
 	ReadTimeout       int
-	WriteTimeout      int
 	Handlers          map[int]handler.HandlerFunc
 }
 
@@ -48,8 +47,6 @@ func (e *EngineWrapper[T]) OnClose(c gnet.Conn, err error) gnet.Action {
 
 func (e *EngineWrapper[T]) OnTraffic(c gnet.Conn) gnet.Action {
 	var h handler.HandlerFunc
-	var act gnet.Action
-	var pkt [][]byte
 	var buf []byte
 	var err error
 	var ok bool
@@ -76,17 +73,7 @@ func (e *EngineWrapper[T]) OnTraffic(c gnet.Conn) gnet.Action {
 		goto respond
 	}
 
-	pkt, act = h(c, buf[hd:])
-	if e.WriteTimeout > 0 {
-		_ = c.SetWriteDeadline(time.Now().Add(time.Duration(e.WriteTimeout) * time.Second))
-	}
-
-	_, err = c.Writev(pkt)
-	if err != nil {
-		goto respond
-	}
-
-	return act
+	return h(c, buf[hd:])
 respond:
 	return gnet.None
 close:
