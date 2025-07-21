@@ -21,15 +21,53 @@ var log = zerolog.New(zerolog.ConsoleWriter{
 	TimeFormat: "2006-01-02T15:04:05",
 }).With().Timestamp().Str("Group", "bmux").Logger()
 
+// Server represents the bmux TCP server instance.
+// It manages routers, middleware, and the underlying event engine.
+//
+// T is a generic type parameter representing the connection context type.
+//
+// Usage:
+//
+//	ctxFactory := func() *MyContext { return &MyContext{} }
+//	extractLen := func(c gnet.Conn, buf []byte) (headLen, totalLen int) { ... }
+//	extractID := func(c gnet.Conn, head []byte) int { ... }
+//
+//	server := bmux.New(ctxFactory, extractLen, extractID, nil)
+//	server.LoadRouter(myRouters)
+//	server.LoadMiddleware(myMiddleware)
+//	server.Start()
+//
+// The server handles connections using gnet for high-performance async I/O.
 type Server[T any] struct {
 	engineWrapper *engine.EngineWrapper[T]
 	routers       []router.Router
 	middleware    []middleware.Middleware
 }
 
+// Option defines a functional option to customize the Server.
 type Option[T any] func(*Server[T])
 
-func New[T any](contextFactory func() *T, extractLength engine.ExtractLengthFunc[T], extractMsgID engine.ExtractMsgIDFunc[T], override *config.Config, opts ...Option[T]) *Server[T] {
+// New creates a new bmux Server instance with the given context factory,
+// length extractor, message ID extractor, optional config override, and options.
+//
+// It validates required arguments and loads configuration.
+//
+// Example:
+//
+//	ctxFactory := func() *MyContext { return &MyContext{} }
+//	extractLen := func(c gnet.Conn, buf []byte) (headLen, totalLen int) { ... }
+//	extractID := func(c gnet.Conn, head []byte) int { ... }
+//
+//	server := bmux.New(ctxFactory, extractLen, extractID, nil)
+//
+// The server is ready to have routers and middleware loaded before starting.
+func New[T any](
+	contextFactory func() *T,
+	extractLength engine.ExtractLengthFunc[T],
+	extractMsgID engine.ExtractMsgIDFunc[T],
+	override *config.Config,
+	opts ...Option[T],
+) *Server[T] {
 	if contextFactory == nil {
 		log.Fatal().Str("Function", "New").Msg("contextFactory cannot be nil")
 	}
@@ -70,16 +108,33 @@ func New[T any](contextFactory func() *T, extractLength engine.ExtractLengthFunc
 	return s
 }
 
+// LoadRouter appends one or more routers to the server.
+//
+// Routers contain groups of routes and their associated middleware.
+//
+// Example:
+//
+//	myRouter := router.NewRouter(true, routes, middleware, opts...)
+//	server.LoadRouter([]router.Router{myRouter})
 func (s *Server[T]) LoadRouter(routes []router.Router) {
 	s.routers = append(s.routers, routes...)
 }
 
+// LoadMiddleware appends global middleware to the server.
+//
+// Middleware applied here runs for all routes.
+//
+// Example:
+//
+//	server.LoadMiddleware([]middleware.Middleware{myMiddleware})
 func (s *Server[T]) LoadMiddleware(middleware []middleware.Middleware) {
 	s.middleware = append(s.middleware, middleware...)
 }
 
-// registerRoutes registers routes and applies middleware chain for all routers and routes.
-// This is called once at Start(), ensuring all routers and middleware are loaded.
+// registerRoutes composes middleware chains and registers handlers
+// from routers and routes into the engine's handler map.
+//
+// This method is invoked once automatically on server Start().
 func (s *Server[T]) registerRoutes() {
 	for _, rt := range s.routers {
 		if !rt.Status() {
@@ -111,7 +166,6 @@ func (s *Server[T]) registerRoutes() {
 				}
 			}
 
-			// Log route registration
 			log.Debug().
 				Str("Name", route.Name()).
 				Int("RouteID", int(route.ID())).
@@ -119,12 +173,19 @@ func (s *Server[T]) registerRoutes() {
 				Bool("Status", route.Status()).
 				Msg("Registering route")
 
-			// Register with engine wrapper
 			s.engineWrapper.Handlers[route.ID()] = handler
 		}
 	}
 }
 
+// Start launches the server, listening on the configured address and port,
+// and gracefully handles shutdown on system interrupts.
+//
+// It blocks until the server exits.
+//
+// Example:
+//
+//	server.Start()
 func (s *Server[T]) Start() {
 	s.registerRoutes()
 
@@ -156,6 +217,15 @@ func (s *Server[T]) Start() {
 	<-done
 }
 
+// Shutdown gracefully stops the server using the provided context for timeout control.
+//
+// Returns any error encountered during shutdown.
+//
+// Example:
+//
+//	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+//	defer cancel()
+//	err := server.Shutdown(ctx)
 func (s *Server[T]) Shutdown(ctx context.Context) error {
 	log.Warn().Str("Function", "Shutdown").Msg("Shutting down server")
 	return s.engineWrapper.Engine.Stop(ctx)

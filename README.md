@@ -1,17 +1,14 @@
 # bmux
 
-`bmux` is a modular TCP multiplexer and routing framework for Go. It provides a declarative interface for handling custom binary protocols using a router/middleware architecture inspired by modern web frameworks.
+`bmux` is a modular TCP multiplexer and routing framework for Go. It provides a declarative interface for handling custom binary protocols using a router and middleware architecture inspired by modern web frameworks.
 
 ## Features
 
-- **Pluggable Middleware Support** – Global, router-level, and route-level middleware chaining
-- **Router-Based Dispatching** – Organize handlers in routers with isolated configuration
-- **Binary Message Routing** – Parse and dispatch TCP messages based on custom headers
-- **Concurrent Connection Handling** – Efficient handling of multiple clients
-- **Structured Configuration** – Load runtime options via `config.Config`
-- **Zerolog Integration** – Consistent and contextual structured logging support
-
-
+* Global, router-level, and route-level middleware chaining
+* Organize handlers into routers with isolated configuration
+* Parse and dispatch TCP messages using generic packet structures
+* Built on top of the `gnet` async networking engine for efficient concurrency
+* Load runtime options via `config.Config`
 
 ## Installation
 
@@ -27,59 +24,54 @@ import (
 	"github.com/etwodev/bmux/router"
 )
 
-// Define your header struct
-type MyHeader struct {
+// Define your context struct
+type MyContext struct {
 	Command int32
 }
 
-func (h *MyHeader) ID() int32 {
-	return h.Command
-}
-
-// Define a simple handler
-func HelloHandler() router.HandlerFunc {
-	return func(ctx *router.Context) {
-		// handle the message
-	}
-}
+// Define extraction functions as needed for your protocol
 
 func main() {
-	s := bmux.New(&MyHeader{})
+	// Provide context factory and extraction functions to bmux.New
+	contextFactory := func() *MyContext { return &MyContext{} }
+	extractLength := func(c gnet.Conn, buf []byte) (headLen, totalLen int) { /* ... */ }
+	extractMsgID := func(c gnet.Conn, head []byte) int { /* ... */ }
+
+	server := bmux.New(contextFactory, extractLength, extractMsgID, nil)
 
 	// Create router and register routes
 	r := router.New("main")
-	r.Route(1, HelloHandler()) // ID 1 mapped to HelloHandler
-	s.LoadRouter([]router.Router{r})
+	r.Route(1, router.HandlerFunc(func(ctx *router.Context) {
+		// handle message with ID 1
+	}))
+	server.LoadRouter([]router.Router{r})
 
-	// Start server with config.Address() and config.Port()
-	if err := s.Start(); err != nil {
-		panic(err)
-	}
+	// Start the server (listens on config.Address() and config.Port())
+	server.Start()
 }
 ```
 
 ## Middleware
 
-You can apply middleware at three levels:
+Middleware can be applied at three levels:
 
-* **Global**: Applies to all routes
-* **Router-Level**: Applies to all routes within a router
-* **Route-Level**: Applies to individual routes
+* **Global** — applies to all routes
+* **Router-Level** — applies to all routes within a router
+* **Route-Level** — applies to individual routes
 
 ### Example: Logging Middleware
 
 ```go
-logger := log.NewZeroLogger(zerolog.New(os.Stdout).With().Timestamp().Logger())
-
+logger := zerolog.New(os.Stdout).With().Timestamp().Logger()
 loggingMiddleware := middleware.NewLoggingMiddleware(logger)
-s.LoadMiddleware([]middleware.Middleware{loggingMiddleware})
+server.LoadMiddleware([]middleware.Middleware{loggingMiddleware})
 ```
 
-Inside your route:
+Inside a handler:
 
 ```go
 if l := ctx.Context.Value(middleware.LoggerCtxKey); l != nil {
-    if logger, ok := l.(log.Logger); ok {
+    if logger, ok := l.(zerolog.Logger); ok {
         logger.Info().Msg("Processing route")
     }
 }
@@ -87,44 +79,39 @@ if l := ctx.Context.Value(middleware.LoggerCtxKey); l != nil {
 
 ## Configuration
 
-`bmux` reads runtime configuration via the `config.Config` struct. This supports:
+`bmux` uses the `config.Config` struct to load runtime settings such as:
 
-* Port and address binding
-* Logging level (`debug`, `info`, `warn`, etc.)
-* Timeout durations
-* Keep-alive toggle
-* Graceful shutdown duration
-* Max concurrent connections
+* Server address and port
+* Logging level (e.g., `debug`, `info`, `warn`)
+* Timeout durations (read, write, idle, shutdown)
+* Maximum concurrent connections
+* Enable or disable multi-core mode for `gnet`
 
-Ensure your `config.New()` call is invoked during startup to initialize values.
+Call `config.New()` early in your application to initialize the configuration.
 
 ## Project Structure
 
-```text
+```
 bmux/
-├── bmux.go      → Core server and lifecycle
-├── config/      → Config loading (JSON, env, etc.)
-├── log/         → Abstraction over zerolog
-├── middleware/  → Middleware primitives
-├── parsing/     → TCP envelope and header parsing
-├── router/      → Router, route, and context definitions
+├── bmux.go          → Core server and lifecycle management
+├── pkg/config/          → Configuration loading and management
+├── pkg/middleware/      → Middleware primitives and implementations
+├── pkg/router/          → Router, route, and context definitions
+├── pkg/engine/          → Core networking engine integration (gnet wrapper)
 ```
 
 ## Example Config File
 
 ```json
 {
-  "port": "9000",
-  "address": "0.0.0.0",
-  "logLevel": "debug",
-  "bufferSize": 1024,
-  "maxConnections": 100,
-  "readTimeout": 10,
-  "writeTimeout": 10,
-  "idleTimeout": 30,
-  "shutdownTimeout": 15,
-  "enableKeepAlive": true,
-  "enablePacketLogging": false
+	"port": 9000,
+	"address": "0.0.0.0",
+	"experimental": false,
+	"logLevel": "info",
+	"maxConnections": 100,
+	"readTimeout": 2,
+	"shutdownTimeout": 15,
+	"enableMulticore": true
 }
 ```
 
@@ -132,10 +119,10 @@ bmux/
 
 Contributions are welcome! Please:
 
-1. Fork the repo
+1. Fork the repository
 2. Create a feature branch
-3. Write tests if applicable
-4. Submit a PR with a clear description
+3. Add tests when applicable
+4. Submit a pull request with a clear description
 
 ## License
 
