@@ -77,7 +77,11 @@ func (e *EngineWrapper[T]) OnTraffic(c gnet.Conn) gnet.Action {
 	}
 
 	pkt, act = h(c, buf[hd:])
-	c.Writev(pkt)
+	_, err = c.Writev(pkt)
+	if err != nil {
+		goto respond
+	}
+
 	return act
 respond:
 	return gnet.None
