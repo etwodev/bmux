@@ -1,8 +1,6 @@
 package middleware
 
-import (
-	"github.com/etwodev/bmux/router"
-)
+import "github.com/etwodev/bmux/pkg/handler"
 
 // Middleware defines the interface for TCP middleware that wraps bmux.HandlerFunc
 // and provides metadata about the middleware such as name, status, and experimental flag.
@@ -11,7 +9,7 @@ import (
 type Middleware interface {
 	// Method returns the middleware function that wraps a bmux.HandlerFunc.
 	// The function signature is: func(bmux.HandlerFunc) bmux.HandlerFunc
-	Method() func(router.HandlerFunc) router.HandlerFunc
+	Method() func(handler.HandlerFunc) handler.HandlerFunc
 
 	// Status returns true if the middleware is enabled, false otherwise.
 	Status() bool

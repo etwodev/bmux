@@ -1,25 +1,27 @@
 package router
 
+import "github.com/etwodev/bmux/pkg/handler"
+
 // --- Internal structs ---
 
 type route struct {
-	id           int32
+	id           int
 	name         string
 	status       bool
 	experimental bool
-	handler      HandlerFunc
-	middleware   []func(HandlerFunc) HandlerFunc
+	handler      handler.HandlerFunc
+	middleware   []func(handler.HandlerFunc) handler.HandlerFunc
 }
 
 type router struct {
 	status     bool
 	routes     []Route
-	middleware []func(HandlerFunc) HandlerFunc
+	middleware []func(handler.HandlerFunc) handler.HandlerFunc
 }
 
 // --- Route implementation ---
 
-func (r route) ID() int32 {
+func (r route) ID() int {
 	return r.id
 }
 
@@ -31,11 +33,11 @@ func (r route) Experimental() bool {
 	return r.experimental
 }
 
-func (r route) Handler() HandlerFunc {
+func (r route) Handler() handler.HandlerFunc {
 	return r.handler
 }
 
-func (r route) Middleware() []func(HandlerFunc) HandlerFunc {
+func (r route) Middleware() []func(handler.HandlerFunc) handler.HandlerFunc {
 	return r.middleware
 }
 
@@ -53,7 +55,7 @@ func (r router) Status() bool {
 	return r.status
 }
 
-func (r router) Middleware() []func(HandlerFunc) HandlerFunc {
+func (r router) Middleware() []func(handler.HandlerFunc) handler.HandlerFunc {
 	return r.middleware
 }
 
@@ -67,7 +69,7 @@ type RouteWrapper func(r Route) Route
 func NewRouter(
 	status bool,
 	routes []Route,
-	middleware []func(HandlerFunc) HandlerFunc,
+	middleware []func(handler.HandlerFunc) handler.HandlerFunc,
 	opts ...RouterWrapper,
 ) Router {
 	var r Router = router{
@@ -83,10 +85,10 @@ func NewRouter(
 
 func NewRoute(
 	name string,
-	id int32,
+	id int,
 	status, experimental bool,
-	handler HandlerFunc,
-	middleware []func(HandlerFunc) HandlerFunc,
+	handler handler.HandlerFunc,
+	middleware []func(handler.HandlerFunc) handler.HandlerFunc,
 	opts ...RouteWrapper,
 ) Route {
 	var r Route = route{

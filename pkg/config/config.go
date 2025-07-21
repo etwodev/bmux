@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-const CONFIG = "./bmux.config.json"
+const CONFIG_PATH = "./bmux.config.json"
 
 var c *Config
 
@@ -23,15 +23,15 @@ var c *Config
 //	if err != nil {
 //	    // handle error
 //	}
-func Load() error {
-	_, err := os.Stat(CONFIG)
+func Load(override *Config) error {
+	_, err := os.Stat(CONFIG_PATH)
 	if os.IsNotExist(err) {
-		if err := Create(nil); err != nil {
+		if err := Create(override); err != nil {
 			return fmt.Errorf("Load: failed creating config: %w", err)
 		}
 	}
 
-	file, err := os.ReadFile(CONFIG)
+	file, err := os.ReadFile(CONFIG_PATH)
 	if err != nil {
 		return fmt.Errorf("Load: failed reading json: %w", err)
 	}
@@ -55,18 +55,16 @@ func Load() error {
 //	err := config.Create(&config.Config{Port: "8080"})
 func Create(override *Config) error {
 	defaultConfig := Config{
-		Port:                "30000",
-		Address:             "0.0.0.0",
-		Experimental:        false,
-		LogLevel:            "info",
-		BufferSize:          4096, // 4KB buffer for typical TCP payloads
-		MaxConnections:      1024, // reasonable upper limit, adjust for use-case
-		ReadTimeout:         15,   // in seconds
-		WriteTimeout:        15,
-		IdleTimeout:         60,
-		ShutdownTimeout:     10,
-		EnableKeepAlive:     true,
-		EnablePacketLogging: false,
+		Port:            30000,
+		Address:         "0.0.0.0",
+		Experimental:    false,
+		LogLevel:        "info",
+		MaxConnections:  1024,
+		ReadTimeout:     15,
+		WriteTimeout:    15,
+		ShutdownTimeout: 10,
+		EnableKeepAlive: true,
+		EnableMulticore: true,
 	}
 
 	if override != nil {
@@ -78,7 +76,7 @@ func Create(override *Config) error {
 		return fmt.Errorf("Create: failed marshalling config: %w", err)
 	}
 
-	err = os.WriteFile(CONFIG, file, 0644)
+	err = os.WriteFile(CONFIG_PATH, file, 0644)
 	if err != nil {
 		return fmt.Errorf("Create: failed writing config: %w", err)
 	}
@@ -97,9 +95,9 @@ func Create(override *Config) error {
 //	if err != nil {
 //	    // handle error
 //	}
-func New() error {
+func New(override *Config) error {
 	if c == nil {
-		err := Load()
+		err := Load(override)
 		if err != nil {
 			return fmt.Errorf("New: failed loading json: %w", err)
 		}
