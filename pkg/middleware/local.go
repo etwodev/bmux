@@ -1,15 +1,13 @@
 package middleware
 
-import (
-	"github.com/etwodev/bmux/router"
-)
+import "github.com/etwodev/bmux/pkg/handler"
 
 // --- Internal structs ---
 
 // middleware implements the Middleware interface and holds
 // the core logic of a TCP middleware along with metadata.
 type middleware struct {
-	method       func(router.HandlerFunc) router.HandlerFunc
+	method       func(handler.HandlerFunc) handler.HandlerFunc
 	name         string
 	status       bool
 	experimental bool
@@ -34,7 +32,7 @@ type MiddlewareWrapper func(m Middleware) Middleware
 
 // Method returns the actual middleware function of type
 // func(bmux.HandlerFunc) bmux.HandlerFunc which will be applied to requests.
-func (p middleware) Method() func(router.HandlerFunc) router.HandlerFunc {
+func (p middleware) Method() func(handler.HandlerFunc) handler.HandlerFunc {
 	return p.method
 }
 
@@ -78,7 +76,7 @@ func (p middleware) Experimental() bool {
 //
 //	A Middleware interface implementation.
 func NewMiddleware(
-	method func(router.HandlerFunc) router.HandlerFunc,
+	method func(handler.HandlerFunc) handler.HandlerFunc,
 	name string,
 	status bool,
 	experimental bool,
