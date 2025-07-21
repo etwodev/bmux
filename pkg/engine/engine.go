@@ -77,6 +77,10 @@ func (e *EngineWrapper[T]) OnTraffic(c gnet.Conn) gnet.Action {
 	}
 
 	pkt, act = h(c, buf[hd:])
+	if e.WriteTimeout > 0 {
+		_ = c.SetWriteDeadline(time.Now().Add(time.Duration(e.WriteTimeout) * time.Second))
+	}
+
 	_, err = c.Writev(pkt)
 	if err != nil {
 		goto respond
