@@ -10,6 +10,7 @@ import (
 
 	"github.com/etwodev/bmux/pkg/config"
 	"github.com/etwodev/bmux/pkg/engine"
+	"github.com/etwodev/bmux/pkg/handler"
 	"github.com/etwodev/bmux/pkg/middleware"
 	"github.com/etwodev/bmux/pkg/router"
 	"github.com/panjf2000/gnet/v2"
@@ -95,6 +96,9 @@ func New[T any](
 		ExtractLength:  extractLength,
 		ExtractMsgID:   extractMsgID,
 		HeadSize:       config.HeadSize(),
+		MaxConnections: int64(config.MaxConnections()),
+		ReadTimeout:    config.ReadTimeout(),
+		Handlers:       make(map[int]handler.HandlerFunc),
 	}
 
 	s := &Server[T]{
