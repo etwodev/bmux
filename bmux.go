@@ -97,7 +97,6 @@ func New[T any](
 		ExtractMsgID:   extractMsgID,
 		HeadSize:       config.HeadSize(),
 		MaxConnections: int64(config.MaxConnections()),
-		ReadTimeout:    config.ReadTimeout(),
 		Handlers:       make(map[int]handler.HandlerFunc),
 	}
 
@@ -146,7 +145,11 @@ func (s *Server[T]) registerRoutes() {
 		}
 
 		for _, rt := range rtr.Routes() {
-			if !rt.Status() || rt.Experimental() && !config.Experimental() {
+			if !rt.Status() {
+				continue
+			}
+
+			if rt.Experimental() && !config.Experimental() {
 				continue
 			}
 
@@ -165,9 +168,16 @@ func (s *Server[T]) registerRoutes() {
 			// Global middleware
 			for i := len(s.middleware) - 1; i >= 0; i-- {
 				mw := s.middleware[i]
-				if mw.Status() || mw.Experimental() && config.Experimental() {
-					handler = mw.Method()(handler)
+
+				if !mw.Status() {
+					continue
 				}
+
+				if mw.Experimental() && !config.Experimental() {
+					continue
+				}
+
+				handler = mw.Method()(handler)
 			}
 
 			log.Debug().

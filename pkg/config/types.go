@@ -8,7 +8,6 @@ type Config struct {
 	LogLevel        string `json:"logLevel"`        // Logging level (defaults to info)
 	MaxConnections  int    `json:"maxConnections"`  // Maximum simultaneous connections (defaults to 1024)
 	HeadSize        int    `json:"headSize"`        // The size of the header in bytes (defaults to 3)
-	ReadTimeout     int    `json:"readTimeout"`     // Read timeout in seconds (defaults to 15)
 	ShutdownTimeout int    `json:"shutdownTimeout"` // Graceful shutdown timeout in seconds (defaults to 15)
 	EnableMulticore bool   `json:"enableMulticore"` // Whether to use multiple cores for the server (defaults to true)
 }
@@ -19,6 +18,5 @@ func Experimental() bool    { return c.Experimental }
 func LogLevel() string      { return c.LogLevel }
 func MaxConnections() int   { return c.MaxConnections }
 func HeadSize() int         { return c.HeadSize }
-func ReadTimeout() int      { return c.ReadTimeout }
 func ShutdownTimeout() int  { return c.ShutdownTimeout }
 func EnableMulticore() bool { return c.EnableMulticore }

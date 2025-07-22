@@ -22,7 +22,6 @@ type EngineWrapper[T any] struct {
 	ActiveConnections int64
 	MaxConnections    int64
 	HeadSize          int
-	ReadTimeout       int
 	Handlers          map[int]handler.HandlerFunc
 }
 
@@ -52,10 +51,6 @@ func (e *EngineWrapper[T]) OnTraffic(c gnet.Conn) gnet.Action {
 	var ok bool
 	var ttl int
 	var hd int
-
-	if e.ReadTimeout > 0 {
-		_ = c.SetReadDeadline(time.Now().Add(time.Duration(e.ReadTimeout) * time.Second))
-	}
 
 	buf, err = c.Next(e.HeadSize)
 	if err != nil {

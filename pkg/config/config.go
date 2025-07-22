@@ -60,7 +60,6 @@ func Create(override *Config) error {
 		Experimental:    false,
 		LogLevel:        "info",
 		MaxConnections:  1024,
-		ReadTimeout:     2,
 		ShutdownTimeout: 10,
 		EnableMulticore: true,
 	}
