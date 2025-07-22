@@ -140,21 +140,21 @@ func (s *Server[T]) LoadMiddleware(middleware []middleware.Middleware) {
 //
 // This method is invoked once automatically on server Start().
 func (s *Server[T]) registerRoutes() {
-	for _, rt := range s.routers {
-		if !rt.Status() {
+	for _, rtr := range s.routers {
+		if !rtr.Status() {
 			continue
 		}
 
-		for _, route := range rt.Routes() {
-			if !route.Status() {
+		for _, rt := range rtr.Routes() {
+			if !rt.Status() || rt.Experimental() && !config.Experimental() {
 				continue
 			}
 
-			handler := route.Handler()
+			handler := rt.Handler()
 
 			// Route-level middleware (innermost) - wrapped first, so runs last
-			for i := len(route.Middleware()) - 1; i >= 0; i-- {
-				handler = route.Middleware()[i](handler)
+			for i := len(rt.Middleware()) - 1; i >= 0; i-- {
+				handler = rt.Middleware()[i](handler)
 			}
 
 			// Router-level middleware
@@ -165,19 +165,19 @@ func (s *Server[T]) registerRoutes() {
 			// Global middleware
 			for i := len(s.middleware) - 1; i >= 0; i-- {
 				mw := s.middleware[i]
-				if mw.Status() {
+				if mw.Status() || mw.Experimental() && config.Experimental() {
 					handler = mw.Method()(handler)
 				}
 			}
 
 			log.Debug().
-				Str("Name", route.Name()).
-				Int("RouteID", int(route.ID())).
-				Bool("Experimental", route.Experimental()).
-				Bool("Status", route.Status()).
+				Str("Name", rt.Name()).
+				Int("RouteID", int(rt.ID())).
+				Bool("Experimental", rt.Experimental()).
+				Bool("Status", rt.Status()).
 				Msg("Registering route")
 
-			s.engineWrapper.Handlers[route.ID()] = handler
+			s.engineWrapper.Handlers[rt.ID()] = handler
 		}
 	}
 }
