@@ -62,7 +62,6 @@ func Create(override *Config) error {
 		MaxConnections:  1024,
 		ReadTimeout:     2,
 		ShutdownTimeout: 10,
-		EnableKeepAlive: true,
 		EnableMulticore: true,
 	}
 

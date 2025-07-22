@@ -10,7 +10,6 @@ type Config struct {
 	HeadSize        int    `json:"headSize"`        // The size of the header in bytes (defaults to 3)
 	ReadTimeout     int    `json:"readTimeout"`     // Read timeout in seconds (defaults to 15)
 	ShutdownTimeout int    `json:"shutdownTimeout"` // Graceful shutdown timeout in seconds (defaults to 15)
-	EnableKeepAlive bool   `json:"enableKeepAlive"` // Whether to enable TCP keep-alive (defaults to true)
 	EnableMulticore bool   `json:"enableMulticore"` // Whether to use multiple cores for the server (defaults to true)
 }
 
@@ -22,5 +21,4 @@ func MaxConnections() int   { return c.MaxConnections }
 func HeadSize() int         { return c.HeadSize }
 func ReadTimeout() int      { return c.ReadTimeout }
 func ShutdownTimeout() int  { return c.ShutdownTimeout }
-func EnableKeepAlive() bool { return c.EnableKeepAlive }
 func EnableMulticore() bool { return c.EnableMulticore }
