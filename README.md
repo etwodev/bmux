@@ -210,7 +210,7 @@ bmux/
 ```json
 {
   "port": 30000,
-	"protocol": "tcp://",
+  "protocol": "tcp://",
   "address": "0.0.0.0",
   "experimental": false,
   "logLevel": "debug",
