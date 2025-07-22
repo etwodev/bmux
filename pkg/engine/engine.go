@@ -54,7 +54,7 @@ func (e *EngineWrapper[T]) OnTraffic(c gnet.Conn) gnet.Action {
 
 	buf, err = c.Next(e.HeadSize)
 	if err != nil {
-		goto close
+		goto respond
 	}
 
 	hd, ttl = e.ExtractLength(c, buf)
@@ -71,6 +71,4 @@ func (e *EngineWrapper[T]) OnTraffic(c gnet.Conn) gnet.Action {
 	return h(c, buf[hd:])
 respond:
 	return gnet.None
-close:
-	return gnet.Close
 }
