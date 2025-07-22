@@ -56,6 +56,7 @@ func Load(override *Config) error {
 func Create(override *Config) error {
 	defaultConfig := Config{
 		Port:            30000,
+		Protocol:        "tcp://",
 		Address:         "0.0.0.0",
 		Experimental:    false,
 		LogLevel:        "info",

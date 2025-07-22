@@ -1,9 +1,10 @@
 package config
 
-// Config defines TCP-level configuration options.
+// Config defines network-level configuration options.
 type Config struct {
-	Port            int    `json:"port"`            // TCP listening port (defaults to 30000)
-	Address         string `json:"address"`         // TCP bind address (defaults to 0.0.0.0)
+	Port            int    `json:"port"`            // Listening port (defaults to 30000)
+	Protocol        string `json:"protocol"`        // What protocol to use (defaults to tcp://)
+	Address         string `json:"address"`         // Bind address (defaults to 0.0.0.0)
 	Experimental    bool   `json:"experimental"`    // Enable experimental routes (defaults to false)
 	LogLevel        string `json:"logLevel"`        // Logging level (defaults to info)
 	MaxConnections  int    `json:"maxConnections"`  // Maximum simultaneous connections (defaults to 1024)
@@ -13,6 +14,7 @@ type Config struct {
 }
 
 func Port() int             { return c.Port }
+func Protocol() string      { return c.Protocol }
 func Address() string       { return c.Address }
 func Experimental() bool    { return c.Experimental }
 func LogLevel() string      { return c.LogLevel }

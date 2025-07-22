@@ -22,7 +22,7 @@ var log = zerolog.New(zerolog.ConsoleWriter{
 	TimeFormat: "2006-01-02T15:04:05",
 }).With().Timestamp().Str("Group", "bmux").Logger()
 
-// Server represents the bmux TCP server instance.
+// Server represents the bmux server instance.
 // It manages routers, middleware, and the underlying event engine.
 //
 // T is a generic type parameter representing the connection context type.
@@ -203,7 +203,7 @@ func (s *Server[T]) registerRoutes() {
 func (s *Server[T]) Start() {
 	s.registerRoutes()
 
-	addr := fmt.Sprintf("%s:%d", config.Address(), config.Port())
+	addr := fmt.Sprintf("%s%s:%d", config.Protocol(), config.Address(), config.Port())
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
@@ -211,7 +211,7 @@ func (s *Server[T]) Start() {
 	done := make(chan struct{})
 
 	go func() {
-		err := gnet.Run(s.engineWrapper, "tcp://"+addr, gnet.WithMulticore(config.EnableMulticore()))
+		err := gnet.Run(s.engineWrapper, addr, gnet.WithMulticore(config.EnableMulticore()))
 		if err != nil {
 			log.Fatal().Err(err).Msg("gnet server failed to start")
 		}

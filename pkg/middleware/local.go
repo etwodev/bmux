@@ -5,7 +5,7 @@ import "github.com/etwodev/bmux/pkg/handler"
 // --- Internal structs ---
 
 // middleware implements the Middleware interface and holds
-// the core logic of a TCP middleware along with metadata.
+// the core logic of a bmux middleware along with metadata.
 type middleware struct {
 	method       func(handler.HandlerFunc) handler.HandlerFunc
 	name         string
@@ -66,7 +66,7 @@ func (p middleware) Experimental() bool {
 //	  WithLoggingDecorator)
 //
 // Parameters:
-//   - method: the TCP middleware handler function.
+//   - method: the bmux middleware handler function.
 //   - name: a descriptive name for the middleware.
 //   - status: whether the middleware should be enabled.
 //   - experimental: whether the middleware is experimental.

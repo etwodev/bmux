@@ -2,7 +2,7 @@ package middleware
 
 import "github.com/etwodev/bmux/pkg/handler"
 
-// Middleware defines the interface for TCP middleware that wraps bmux.HandlerFunc
+// Middleware defines the interface for bmux middleware that wraps bmux.HandlerFunc
 // and provides metadata about the middleware such as name, status, and experimental flag.
 //
 // This interface enables middleware management, dynamic enabling/disabling, and identification.

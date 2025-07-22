@@ -1,12 +1,14 @@
 # bmux
 
-`bmux` is a modular TCP multiplexer and routing framework for Go. It provides a declarative interface for handling custom binary protocols using a router and middleware architecture inspired by modern web frameworks.
+`bmux` is a modular (primarily TCP*) multiplexer and routing framework for Go. It provides a declarative interface for handling custom binary protocols using a router and middleware architecture inspired by modern web frameworks.
+
+*While `bmux` does support the option to use UDP, some features and config options like MaxConnections may not work due to the nature of UDP being connectionless.
 
 ## Features
 
 * Global, router-level, and route-level middleware chaining
 * Organize handlers into routers with isolated configuration
-* Parse and dispatch TCP messages using generic packet structures
+* Parse and dispatch messages using generic packet structures
 * Built on top of the `gnet` async networking engine for efficient concurrency
 * Load runtime options via `config.Config`
 
@@ -208,6 +210,7 @@ bmux/
 ```json
 {
   "port": 30000,
+	"protocol": "tcp://",
   "address": "0.0.0.0",
   "experimental": false,
   "logLevel": "debug",
