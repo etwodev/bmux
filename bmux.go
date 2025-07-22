@@ -20,7 +20,7 @@ import (
 var log = zerolog.New(zerolog.ConsoleWriter{
 	Out:        os.Stdout,
 	TimeFormat: "2006-01-02T15:04:05",
-}).With().Timestamp().Str("Group", "bmux").Logger()
+}).With().Timestamp().Str("Group", "bmux-wrapper").Logger()
 
 // Server represents the bmux server instance.
 // It manages routers, middleware, and the underlying event engine.
@@ -82,7 +82,7 @@ func New[T any](
 	}
 
 	if err := config.New(override); err != nil {
-		log.Fatal().Str("Function", "New").Err(err).Msg("Failed to load config")
+		log.Fatal().Str("Function", "New").Err(err).Msg("failed to load config")
 	}
 
 	level, err := zerolog.ParseLevel(config.LogLevel())
@@ -185,7 +185,7 @@ func (s *Server[T]) registerRoutes() {
 				Int("RouteID", int(rt.ID())).
 				Bool("Experimental", rt.Experimental()).
 				Bool("Status", rt.Status()).
-				Msg("Registering route")
+				Msg("registering route")
 
 			s.engineWrapper.Handlers[rt.ID()] = handler
 		}
@@ -219,7 +219,7 @@ func (s *Server[T]) Start() {
 	}()
 
 	<-stop
-	log.Warn().Msg("Interrupt received, initiating shutdown...")
+	log.Warn().Msg("interrupt received, initiating shutdown")
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(config.ShutdownTimeout())*time.Second)
 	defer cancel()
@@ -241,6 +241,6 @@ func (s *Server[T]) Start() {
 //	defer cancel()
 //	err := server.Shutdown(ctx)
 func (s *Server[T]) Shutdown(ctx context.Context) error {
-	log.Warn().Str("Function", "Shutdown").Msg("Shutting down server")
+	log.Warn().Str("Function", "Shutdown").Msg("shutting down server")
 	return s.engineWrapper.Engine.Stop(ctx)
 }
