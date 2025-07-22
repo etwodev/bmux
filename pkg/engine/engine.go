@@ -9,7 +9,7 @@ import (
 )
 
 type ExtractLengthFunc[T any] func(c gnet.Conn, buf []byte) (headLen int, totalLen int)
-type ExtractMsgIDFunc[T any] func(c gnet.Conn, head []byte) (msgID int)
+type ExtractMsgIDFunc[T any] func(c gnet.Conn, head []byte, body []byte) (msgID int)
 type ContextFactoryFunc[T any] func() *T
 
 type EngineWrapper[T any] struct {
@@ -63,7 +63,7 @@ func (e *EngineWrapper[T]) OnTraffic(c gnet.Conn) gnet.Action {
 		goto respond
 	}
 
-	h, ok = e.Handlers[e.ExtractMsgID(c, buf[:hd])]
+	h, ok = e.Handlers[e.ExtractMsgID(c, buf[:hd], buf[hd:])]
 	if !ok {
 		goto respond
 	}
